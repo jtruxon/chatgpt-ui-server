@@ -1,3 +1,5 @@
+ARG TARGET_STAGE=web-server
+
 FROM python:3.10-slim as wsgi-server
 
 RUN apt update \
@@ -8,9 +10,22 @@ ENV DJANGO_SUPERUSER_USERNAME=admin
 ENV DJANGO_SUPERUSER_PASSWORD=password
 ENV DJANGO_SUPERUSER_EMAIL=admin@example.com
 
+WORKDIR /app
+RUN apt-get update -y && \
+    apt-get install -y apt-transport-https ca-certificates 
+# RUN apk add ca-certificates 
+COPY certs ./certs
+RUN mkdir -p /usr/local/share/ca-certificates \
+    && cp /app/certs/*.crt /usr/local/share/ca-certificates \
+    && update-ca-certificates
+
+ENV CURL_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
+ENV REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
+
 COPY requirements.txt ./
 
-RUN pip install --no-cache-dir -i https://mirrors.cloud.tencent.com/pypi/simple -r requirements.txt
+# RUN pip install --no-cache-dir -i https://mirrors.cloud.tencent.com/pypi/simple -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
 
 WORKDIR /app
 
@@ -30,6 +45,20 @@ FROM nginx:1.22-alpine as web-server
 
 WORKDIR /app
 
+# RUN apt-get update -y && \
+#     apt-get install -y apt-transport-https ca-certificates 
+RUN apk add ca-certificates 
+COPY certs ./certs
+RUN mkdir -p /usr/local/share/ca-certificates \
+    && cp /app/certs/*.crt /usr/local/share/ca-certificates \
+    && update-ca-certificates
+
+ENV CURL_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
+ENV REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
+
 COPY --from=wsgi-server /app/static /app/static
 
 COPY nginx.conf /etc/nginx/templates/default.conf.template
+
+
+FROM $TARGET_STAGE
