@@ -12,7 +12,7 @@ ENV DJANGO_SUPERUSER_EMAIL=admin@example.com
 
 WORKDIR /app
 RUN apt-get update -y && \
-    apt-get install -y apt-transport-https ca-certificates 
+    apt-get install -y --fix-missing apt-transport-https ca-certificates 
 # RUN apk add ca-certificates 
 COPY certs ./certs
 RUN mkdir -p /usr/local/share/ca-certificates \
